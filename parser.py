@@ -1,5 +1,6 @@
 import spacy as sp
 import re
+from rapidfuzz import process
 
 nlp = sp.load("en_core_web_sm")
 
@@ -18,9 +19,9 @@ POKE_STATS = {
 }
 
 POKE_TYPES = {
-    "Normal", "Fire", "Water", "Electric", "Grass", "Ice",
-    "Fighting", "Poison", "Ground", "Flying", "Psychic",
-    "Bug", "Rock", "Ghost", "Dragon", "Dark", "Steel", "Fairy"
+    "normal", "fire", "water", "electric", "grass", "ice",
+    "fighting", "poison", "ground", "flying", "psychic",
+    "bug", "rock", "ghost", "dragon", "dark", "steel", "fairy"
 }
 
 # Map of comparisons and their operators
@@ -43,22 +44,31 @@ OPERATOR_MAP = {
     "<": "<"  
 }
 
-def extract_query_components(text):
-    doc = nlp(text.lower())
+#Uses rapidfuzz to allow typo lenience in user query
+def match(query, choices, threshold=80):
+    match, score, _ = process.extractOne(query, choices)
+    return match if score >= threshold else None
 
-    #Step 1: Look for types in user query
+def extract_query_components(text):
+    text = text.lower() #Lowercase all text to match the dataset
+    doc = nlp(text) #Processes user query as a list of tokens
+
+    tokens = [token.text for token in doc]
+
+    #Step 1: Type detection in user query
     type = None
-    for token in doc:
-        #Crude guess: Checks if token is a proper noun or known Pokemon type
-        if token.text.capitalize() in POKE_TYPES:
-            type = token.text.capitalize()
+    for word in tokens:
+        possible_type = match(word, POKE_TYPES)
+        if possible_type:
+            type = possible_type
             break
     
-    #Step 2: Look for mention of stats by matching against POKE_STATS keys
+    #Step 2: Stat detection in user query by matching against POKE_STATS keys
     stat = None
-    for key in POKE_STATS:
-        if key in text.lower():
-            stat = POKE_STATS[key]
+    for word in tokens:
+        possible_stat = match(word, POKE_STATS.keys())
+        if possible_stat:
+            stat = POKE_STATS[possible_stat]
             break
     
     #Step 3: Look for comparison/operator using keyword matching
@@ -80,5 +90,4 @@ def extract_query_components(text):
             "value": value            
         }
     else:
-        return {"Error": "Could not parse"}
-    
+        return {"Error": "Could not fully parse query"}
