@@ -7,7 +7,7 @@ pokedex = pd.read_csv("data/pokedex.csv")
 query = "LIST ALL POSION TYPES WITH 50 OR LESS ATACK"
 parsed = extract_query_components(query)
 
-print(parsed)
+print(f"Parsed Query:\n{parsed}")
 
 filtered = filter_data(pokedex, parsed)
-print(filtered)
+print(f"Filtered Query:\n{filtered}")
